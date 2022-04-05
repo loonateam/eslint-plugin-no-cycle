@@ -1,0 +1,35 @@
+{
+  "name": "eslint-plugin-no-cycle",
+  "version": "1.0.1",
+  "description": "",
+  "scripts": {
+    "build": "babel src --out-dir lib",
+    "postinstall": "rm -rf ./src"
+  },
+  "main": "index.js",
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "array-includes": "^3.1.4",
+    "array.prototype.flat": "^1.2.5",
+    "debug": "^2.6.9",
+    "doctrine": "^2.1.0",
+    "eslint-import-resolver-node": "^0.3.6",
+    "eslint-module-utils": "^2.7.3",
+    "has": "^1.0.3",
+    "is-core-module": "^2.8.1",
+    "is-glob": "^4.0.3",
+    "minimatch": "^3.1.2",
+    "object.values": "^1.1.5",
+    "resolve": "^1.22.0",
+    "tsconfig-paths": "^3.13.0"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.17.6",
+    "@babel/core": "^7.17.8",
+    "@babel/preset-env": "^7.16.11",
+    "eslint": "^8.12.0",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-plugin-import": "^2.25.4"
+  }
+}
