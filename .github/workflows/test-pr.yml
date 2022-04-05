@@ -1,0 +1,31 @@
+name: Docker Test Image CI
+
+on:
+  pull_request:
+    types: [assigned, opened, synchronize, reopened]
+    branches: [ main, dev, production ]
+    paths:
+      - '.github/workflows/test-pr.yml'
+      - 'src/**'
+      - 'nginx/**'
+      - 'Dockerfile'
+      - 'Makefile'
+      - 'requirements.txt'
+
+jobs:
+  image-test:
+    runs-on: ubuntu-20.04
+    env:
+      GIT_DOCKER_USERNAME: ${{ secrets.GIT_DOCKER_USERNAME }}
+      GIT_DOCKER_PASS: ${{ secrets.GIT_DOCKER_PASS }}
+    
+    steps:
+    - uses: actions/checkout@v2
+    - name: Pull old image from Dockerhub
+      run: make pull-test
+
+    - name: Build test project
+      run: make build
+
+    - name: Run project test
+      run: make test

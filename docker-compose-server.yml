@@ -1,0 +1,29 @@
+version: "3"
+
+x-hostname: &hostname
+  hostname: name-${TAG:-local}
+
+
+services:
+
+  # image auto-deploy
+  watchtower:
+    image: containrrr/watchtower:1.3.0
+    container_name: media_watchtower
+    <<: *hostname
+    restart: always
+    environment:
+      - WATCHTOWER_DEBUG=true
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_POLL_INTERVAL=30
+      - WATCHTOWER_REVIVE_STOPPED=true
+      - WATCHTOWER_INCLUDE_STOPPED=true
+      - WATCHTOWER_ROLLING_RESTART=true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./.docker/config.json:/config.json # for privat repo connect
+    command: media_back media_nginx media_pgbouncer media_nginxlog_exporter
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "2"

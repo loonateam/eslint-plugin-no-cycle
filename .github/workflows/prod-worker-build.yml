@@ -1,0 +1,25 @@
+name: Docker PROD Pay Worker Image CI
+
+on:
+  push:
+    branches: [ production ]
+    paths:
+      - 'src/**'
+      - '.github/workflows/prod-worker-build.yml'
+
+jobs:
+  prod-build-push:
+    runs-on: ubuntu-20.04
+    env:
+      GIT_DOCKER_USERNAME: ${{ secrets.GIT_DOCKER_USERNAME }}
+      GIT_DOCKER_PASS: ${{ secrets.GIT_DOCKER_PASS }}
+    steps:
+    - uses: actions/checkout@v2
+    - name: Pull old DEV image from Dockerhub
+      run: make pull-dev
+
+    - name: Build PROD image
+      run: make build-prod
+      
+    - name: Push PROD image to Dockerhub
+      run: make push-prod

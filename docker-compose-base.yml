@@ -1,0 +1,178 @@
+version: "3"
+
+x-env: &env
+  env_file:
+    - ./src/.env
+
+x-hostname: &hostname
+  hostname: name-${TAG:-local}
+
+
+services:
+  nginx:
+    image: ghcr.io/loonateam/loonapayworker/nginx:${TAG:-latest}
+    <<: *hostname
+    container_name: pay_worker_nginx
+    restart: always
+    ports:
+      - 80:80
+      - 9113:9113 # NGINX Exporter
+      - 4040:4040 # NGINX Log
+      - 8080:8080 # CAdvisor
+      - 8888:8888 # Flower
+      - 9540:9540 # Celery exporter
+      - 9080:9080 # Promtail
+      - 15592:15592 # Rabbit prometheus
+      - 5577:5577 # Rabbit connect
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  app:
+    image: ghcr.io/loonateam/loonapayworker/back:${TAG:-latest}
+    <<: *hostname
+    container_name: pay_worker_back
+    restart: always
+    command: bash -c "cd src/ && python start.py"
+    depends_on:
+      - rabbit
+    volumes:
+      - app_logs:/app/src/logs
+    environment:
+      - SERVER_TYPE=${TAG:-local}
+    <<: *env
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  celery:
+    image: ghcr.io/loonateam/loonapayworker/back:${TAG:-latest}
+    <<: *hostname
+    container_name: pay_worker_celery
+    restart: always
+    command: bash -c "cd src/ && celery -A Worker.tasks worker -B -E -l INFO --concurrency=2"
+    volumes:
+      - celery_logs:/app/src/logs
+    environment:
+      - SERVER_TYPE=${TAG:-local}
+    <<: *env
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  rabbit:
+    image: rabbitmq:3.8-management-alpine
+    <<: *hostname
+    container_name: pay_worker_rabbit
+    restart: always
+    environment:
+      - RABBITMQ_VM_MEMORY_HIGH_WATERMARK=0.5
+    <<: *env
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+      - rabbitmq_config:/etc/rabbitmq
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  # Analytics
+  flower:
+    image: mher/flower:0.9.7
+    <<: *hostname
+    container_name: pay_worker_flower
+    restart: always
+    command: flower --port=8888
+    <<: *env
+    depends_on:
+      - celery
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  # Monitoring
+  nginx-exporter:
+    image: nginx/nginx-prometheus-exporter:0.9.0
+    <<: *hostname
+    container_name: pay_worker_nginx_exporter
+    restart: always
+    depends_on:
+      - nginx
+    environment:
+      - SCRAPE_URI=http://pay_worker_nginx:81/stub_status
+      - TELEMETRY_PATH=/prometheus
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  nginxlog-exporter:
+    image: ghcr.io/loonateam/loona_nginx/nginxlog
+    <<: *hostname
+    container_name: pay_worker_nginxlog_exporter
+    restart: always
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.39.0
+    <<: *hostname
+    container_name: pay_worker_cadvisor
+    command: --port=8080
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  celery-exporter:
+    image: ovalmoney/celery-exporter:latest
+    <<: *hostname
+    container_name: pay_worker_celery_exporter
+    command: --enable-events --verbose
+    restart: always
+    environment:
+      - CELERY_EXPORTER_LISTEN_ADDRESS=0.0.0.0:9540
+      - CELERY_EXPORTER_MAX_TASKS=10000
+      - CELERY_EXPORTER_NAMESPACE=celery
+    <<: *env
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  promtail:
+    image: grafana/promtail:2.2.1
+    <<: *hostname
+    container_name: pay_worker_promtail
+    command: -config.file=/etc/promtail/config.yaml
+    restart: always
+    volumes:
+      - ./promtail/config-${TAG:-local}.yaml:/etc/promtail/config.yaml
+      - celery_logs:/var/log/celery/
+      - app_logs:/var/log/app/
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+
+volumes:
+  rabbitmq_data:
+  rabbitmq_config:
+  celery_logs:
+  app_logs:
+
+networks:
+  default:

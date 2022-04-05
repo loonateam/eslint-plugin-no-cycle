@@ -1,0 +1,29 @@
+name: Docker DEV Pay-Worker Image CI
+
+on:
+  push:
+    branches: [ dev ]
+    paths:
+      - 'src/**'
+      - '.github/workflows/dev-worker-build.yml'
+      - 'nginx/**'
+      - 'Dockerfile'
+      - 'Makefile'
+      - 'requirements.txt'
+
+jobs:
+  dev-build-push:
+    runs-on: ubuntu-20.04
+    env:
+      GIT_DOCKER_USERNAME: ${{ secrets.GIT_DOCKER_USERNAME }}
+      GIT_DOCKER_PASS: ${{ secrets.GIT_DOCKER_PASS }}
+    steps:
+    - uses: actions/checkout@v2
+    - name: Pull old DEV image from Dockerhub
+      run: make pull-dev
+
+    - name: Build DEV image
+      run: make build-dev
+      
+    - name: Push DEV image to Dockerhub
+      run: make push-dev

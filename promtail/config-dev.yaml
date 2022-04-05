@@ -1,0 +1,63 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loona_prometheus:23B3XjGhoACUb6EZ2m8MV28CizbbE6@104.248.55.171:3100/loki/api/v1/push
+
+scrape_configs:
+  - job_name: media-app-router-log
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: media-app-router-log
+          group: development
+          __path__: /var/log/app/router.log
+
+    pipeline_stages:
+      - regex:
+          expression: "^(?P<dt>\\d+-\\d+-\\d+ \\d+:\\d+:\\d+,\\d+) \\[(?P<level>\\w+)\\] \\w+.(?P<module>\\w+.\\w+).(?P<router>\\w+).(?P<method>\\w+): (?P<content>.*)$"
+      - template:
+          source: dt
+          template: '{{ Replace .Value "," "." -1 }}'
+      - timestamp:
+          source: dt
+          format: "2020-10-22 15:04:05.000"
+      - output:
+          source: content
+      - labels:
+          level:
+          module:
+          router:
+          method:
+
+
+  - job_name: media-app-log
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: media-app-log
+          group: development
+          __path__: /var/log/app/main.log
+
+    pipeline_stages:
+      - regex:
+          expression: "^(?P<dt>\\d+-\\d+-\\d+ \\d+:\\d+:\\d+,\\d+) \\[(?P<level>\\w+)\\] \\w+.(?P<module>\\w+).(?P<endpoint>\\w+).(?P<function>\\w+): (?P<content>.*)$"
+      - template:
+          source: dt
+          template: '{{ Replace .Value "," "." -1 }}'
+      - timestamp:
+          source: dt
+          format: "2020-10-22 15:04:05.000"
+      - output:
+          source: content
+      - labels:
+          level:
+          module:
+          endpoint:
+          function:
