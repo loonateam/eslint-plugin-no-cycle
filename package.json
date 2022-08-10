@@ -3,8 +3,7 @@
   "version": "1.0.1",
   "description": "",
   "scripts": {
-    "build": "babel src --out-dir lib",
-    "postinstall": "rm -rf ./src"
+    "build": "babel src --out-dir lib"
   },
   "main": "index.js",
   "author": "",

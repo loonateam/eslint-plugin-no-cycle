@@ -5,13 +5,17 @@ import fs from 'fs';
 import Exports from './ExportMap';
 import importType from './core/importType';
 
+function routeString(route) {
+  return route.map(s => `${s.value}:${s.loc.start.line}`).join('=>');
+}
+
 export const meta = {
   type: "suggestion",
   docs: {
-      description: "Ensures that there is no resolvable path back to this module via its dependencies.",
-      category: "Possible Errors",
-      recommended: true,
-      url: "https://github.com/import-js/eslint-plugin-import/blob/main/docs/rules/no-cycle.md"
+    description: "Ensures that there is no resolvable path back to this module via its dependencies.",
+    category: "Possible Errors",
+    recommended: true,
+    url: "https://github.com/import-js/eslint-plugin-import/blob/main/docs/rules/no-cycle.md"
   },
 }
 
@@ -41,8 +45,8 @@ export const rules = {
           importer.type === 'ImportDeclaration' && (
             // import type { Foo } (TS and Flow)
             importer.importKind === 'type'
-                  // import { type Foo } (Flow)
-                  || importer.specifiers.every(({ importKind }) => importKind === 'type')
+            // import { type Foo } (Flow)
+            || importer.specifiers.every(({ importKind }) => importKind === 'type')
           )
         ) {
           return; // ignore type imports
@@ -69,18 +73,18 @@ export const rules = {
           for (const [path, { getter, declarations }] of m.imports) {
             if (traversed.has(path)) continue;
             const toTraverse = [...declarations].filter(({ source, isOnlyImportingTypes }) => !ignoreModule(source.value)
-                    // Ignore only type imports
-                    && !isOnlyImportingTypes);
-              /*
-                  Only report as a cycle if there are any import declarations that are considered by
-                  the rule. For example:
+              // Ignore only type imports
+              && !isOnlyImportingTypes);
+            /*
+                Only report as a cycle if there are any import declarations that are considered by
+                the rule. For example:
 
-                  a.ts:
-                  import { foo } from './b' // should not be reported as a cycle
+                a.ts:
+                import { foo } from './b' // should not be reported as a cycle
 
-                  b.ts:
-                  import type { Bar } from './a'
-                  */
+                b.ts:
+                import type { Bar } from './a'
+                */
             if (path === myPath && toTraverse.length > 0) return true;
             if (route.length + 1 < maxDepth) {
               for (const { source } of toTraverse) {
